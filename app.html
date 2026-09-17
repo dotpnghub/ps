@@ -1,0 +1,1504 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sports Control V1</title>
+<script>
+if (new URLSearchParams(location.search).has('view')) {
+  document.documentElement.className = 'overlay';
+}
+</script>
+<style>
+:root {
+  color-scheme: dark;
+  --line: #343940;
+  --muted: #9ba5b3;
+  --blue: #0781ce;
+  --red: #c73138;
+  --green: #20994f;
+  --purple: #8254bb;
+}
+* { box-sizing: border-box }
+body {
+  margin: 0;
+  background: #101215;
+  color: #f4f5f7;
+  font: 15px Tahoma,Arial,sans-serif;
+}
+button,input,select { font: inherit }
+button {
+  border: 0;
+  border-radius: 5px;
+  padding: 11px 14px;
+  color: white;
+  background: #363c44;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.15) }
+button:disabled { opacity: .45; cursor: wait }
+input,select {
+  width: 100%;
+  background: #292d33;
+  border: 1px solid #454b55;
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+}
+input[type=checkbox] { width: auto; accent-color: #159de6 }
+input[type=color] { height: 40px; padding: 3px }
+input[type=range] { padding: 0; accent-color: #008de8 }
+label {
+  display: block;
+  color: #bdc5d0;
+  font-size: 13px;
+  margin: 8px 0 5px;
+}
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.row > * { flex: 1 }
+.row .fit { flex: 0 0 auto }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.small { font-size: 12px; color: var(--muted); line-height: 1.6 }
+.blue { background: var(--blue) }
+.red { background: var(--red) }
+.green { background: var(--green) }
+.purple { background: var(--purple) }
+header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+}
+header strong { font-size: 20px }
+#app { max-width: 1180px; margin: auto; padding: 0 14px 40px }
+nav { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap }
+nav button { flex: 1 }
+nav button.active { background: #2266bb }
+.sport {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 6px;
+}
+.sport button { padding: 16px 4px; border: 1px solid transparent }
+.sport button.active {
+  border-color: #60baff;
+  box-shadow: 0 0 10px #2076ae80;
+}
+.card {
+  background: #1d2025;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 16px;
+  margin: 12px 0;
+}
+.card h2 { font-size: 15px; margin: 0 0 14px; color: #c7cdd6 }
+.clock {
+  font: 700 31px Consolas,monospace;
+  background: #060708;
+  color: #ffeb38;
+  padding: 12px;
+  text-align: center;
+  min-width: 120px;
+}
+.score {
+  background: #060708;
+  color: #52d5bc;
+  font: 700 42px Consolas,monospace;
+  text-align: center;
+  padding: 10px;
+  margin: 10px 0;
+}
+.team {
+  padding: 12px;
+  border-left: 4px solid #177bc4;
+  background: #24272c;
+}
+.team h3 { margin: 0; font-size: 15px }
+.full { width: 100% }
+.badge {
+  border-radius: 20px;
+  padding: 6px 12px;
+  background: #34383e;
+  font-size: 12px;
+}
+.preview {
+  aspect-ratio: 16/9;
+  background: linear-gradient(145deg,#17332b,#304946);
+  overflow: hidden;
+  border-radius: 5px;
+}
+.preview iframe { width: 100%; height: 100%; border: 0 }
+video { width: 100%; max-height: 460px; background: black }
+.files { display: grid; gap: 8px }
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #282c32;
+  border-radius: 4px;
+}
+.file span { flex: 1; min-width: 0; overflow-wrap: anywhere }
+.file button { padding: 7px 12px }
+.camera { background: #262a31; padding: 15px; border-radius: 7px }
+.camera img {
+  width: 160px;
+  background: white;
+  display: block;
+  margin: 12px auto;
+}
+.camera input { font-size: 12px }
+.link { color: #72b7ff }
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  background: #163e62;
+  color: white;
+  z-index: 100;
+  max-width: 90vw;
+  border-radius: 7px;
+  white-space: pre-wrap;
+}
+[hidden] { display: none!important }
+#stage { display: none }
+.overlay body { background: transparent!important; overflow: hidden }
+.overlay #app,.overlay #toast { display: none!important }
+.overlay #stage {
+  display: block;
+  width: 1920px;
+  height: 1080px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+  color: white;
+  overflow: hidden;
+}
+.bug {
+  position: absolute;
+  top: 48px;
+  transform-origin: top center;
+  width: 1080px;
+}
+.league {
+  display: table;
+  margin: auto;
+  background: #050609;
+  padding: 8px 24px;
+  font-weight: bold;
+  font-size: 22px;
+  max-width: 900px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bugbar {
+  display: flex;
+  align-items: stretch;
+  height: 76px;
+  box-shadow: 0 6px 14px #0005;
+}
+.teamlabel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  width: 350px;
+  border-bottom: 6px solid var(--team);
+  font-size: 30px;
+  font-weight: bold;
+}
+.teamlabel span {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.teamlabel img { width: 47px; height: 47px; object-fit: contain }
+.bugscore {
+  background: #050607;
+  min-width: 94px;
+  display: grid;
+  place-items: center;
+  font: 700 40px Arial;
+}
+.bugtime {
+  background: #080a0d;
+  min-width: 150px;
+  display: grid;
+  place-items: center;
+  color: #56d4b7;
+  font: 700 32px Consolas;
+}
+.bugextra {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  background: #080a0dd9;
+  padding: 8px 16px;
+  font-size: 21px;
+}
+.lower {
+  position: absolute;
+  left: 50%;
+  bottom: 85px;
+  transform-origin: bottom center;
+  width: 850px;
+  display: flex;
+  box-shadow: 0 5px 22px #0005;
+}
+.eventlabel {
+  background: #cc1829;
+  min-width: 215px;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  font-weight: bold;
+  padding: 15px;
+}
+.eventbody {
+  flex: 1;
+  background: #101216ee;
+  padding: 12px 22px;
+  border-top: 5px solid #cc1829;
+  font-size: 31px;
+}
+.eventbody small {
+  display: block;
+  font-size: 18px;
+  color: #b8c0c7;
+  margin-bottom: 6px;
+}
+.replaybadge {
+  position: absolute;
+  right: 55px;
+  bottom: 50px;
+  background: #bd2634e6;
+  letter-spacing: 3px;
+  padding: 16px 24px;
+  font-size: 24px;
+  font-weight: bold;
+}
+.vs {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 0 25%,var(--a),transparent 65%),
+    radial-gradient(ellipse at 100% 100%,var(--b),#090d1b 70%);
+  text-align: center;
+}
+.vs h1 { font-size: 48px; margin: 110px 120px 95px }
+.versusrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 110px;
+}
+.vsteam { width: 420px; font-size: 56px; font-weight: bold }
+.vsteam img {
+  display: block;
+  width: 300px;
+  height: 300px;
+  object-fit: contain;
+  margin: 0 auto 35px;
+}
+.vsteam .fallback {
+  width: 300px;
+  height: 300px;
+  margin: 0 auto 35px;
+  border: 8px solid #ffffff80;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 120px;
+}
+.vsword {
+  font: bold italic 130px Arial;
+  color: #ffed2f;
+  text-shadow: 0 0 30px #ffff0044;
+}
+.vsfoot { margin-top: 65px; font-size: 28px; color: #ddd }
+.wipe {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(130deg,#052b49,#0f111c 60%,#135733);
+  animation: sweep 1100ms linear both;
+  z-index: 9;
+}
+.wipe img {
+  max-width: 640px;
+  max-height: 500px;
+  filter: drop-shadow(0 10px 25px #0009);
+}
+.wipe strong { font-size: 110px; color: #cfff66 }
+@keyframes sweep {
+  0% { transform: translateX(-100%) }
+  35%,65% { transform: translateX(0) }
+  100% { transform: translateX(100%) }
+}
+@media(max-width:700px) {
+  .grid { grid-template-columns: 1fr }
+  header { align-items: flex-start }
+  header strong { font-size: 17px }
+  .card { padding: 12px }
+  .row { gap: 6px }
+  .row button { font-size: 13px }
+  .sport button { font-size: 12px }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <header>
+    <strong>SPORTS CONTROL <small>V1</small></strong>
+    <span id="connection" class="badge">กำลังเชื่อมระบบ…</span>
+  </header>
+
+  <nav>
+    <button data-tab="score" onclick="tab('score')" class="active">
+      คะแนน / กราฟิก
+    </button>
+    <button data-tab="replay" onclick="tab('replay')">
+      Instant Replay
+    </button>
+    <button data-tab="camera" onclick="tab('camera')">
+      กล้องมือถือ
+    </button>
+    <button data-tab="setup" onclick="tab('setup')">
+      เชื่อม OBS
+    </button>
+  </nav>
+
+  <div id="status" class="small"></div>
+
+  <section id="page-score">
+    <div class="sport">
+      <button id="mode-football" style="background:#193978"
+        onclick="action({type:'mode',mode:'football'})">
+        ⚽ ฟุตบอล / ฟุตซอล
+      </button>
+      <button id="mode-basketball" style="background:#663018"
+        onclick="action({type:'mode',mode:'basketball'})">
+        🏀 บาสเกตบอล
+      </button>
+      <button id="mode-volleyball" style="background:#06563e"
+        onclick="action({type:'mode',mode:'volleyball'})">
+        🏐 วอลเลย์บอล
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>ตั้งค่าหน้าจอแสดงผลและโลโก้การแข่งขัน</h2>
+
+      <div class="row">
+        <div>
+          <label>ชื่อรายการแข่งขัน</label>
+          <input id="title" data-style="title">
+        </div>
+        <div>
+          <label>สีพื้นหลัง</label>
+          <input id="bg" type="color" data-style="bg">
+        </div>
+        <div>
+          <label>สีข้อความ</label>
+          <input id="text" type="color" data-style="text">
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>ขนาดแถบคะแนน</label>
+          <input id="scale" type="range" min=".5" max="1.8"
+            step=".05" data-style="scale">
+        </div>
+        <div>
+          <label>ตำแหน่งซ้าย–ขวา</label>
+          <input id="x" type="range" min="20" max="80"
+            step="1" data-style="x">
+        </div>
+        <div>
+          <label>ขนาดป้ายเหตุการณ์</label>
+          <input id="eventScale" type="range" min=".5" max="1.8"
+            step=".05" data-style="eventScale">
+        </div>
+      </div>
+
+      <div class="row">
+        <label>
+          <input id="showTime" type="checkbox" data-style="showTime">
+          แสดงเวลา
+        </label>
+        <label>
+          <input id="showFouls" type="checkbox" data-style="showFouls">
+          แสดงฟาวล์
+        </label>
+        <label>
+          <input id="showPenalties" type="checkbox"
+            data-style="showPenalties">
+          แสดงจุดโทษ
+        </label>
+        <label>
+          <input id="stinger" type="checkbox" data-style="stinger">
+          ภาพเคลื่อนไหวก่อน Replay
+        </label>
+      </div>
+
+      <label>โลโก้รายการ (PNG / JPG / WebP ไม่เกิน 3 MB)</label>
+      <input type="file" accept="image/png,image/jpeg,image/webp"
+        onchange="logo(this,'main')">
+    </div>
+
+    <div class="card">
+      <h2>ข้อมูลทีมหลัก</h2>
+      <div class="grid" id="teamEditors"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <h2>ควบคุมคะแนนและเวลาแข่งขัน</h2>
+        <button class="fit" onclick="action({type:'undo'})">
+          ย้อนการแก้คะแนน
+        </button>
+        <button class="red fit" onclick="resetSport()">
+          รีเซ็ตกีฬานี้
+        </button>
+      </div>
+
+      <div class="row">
+        <div>
+          <label id="periodLabel">ช่วงการแข่งขัน</label>
+          <input id="period"
+            onchange="action({type:'period',value:this.value})">
+        </div>
+        <div class="clock" id="mainClock">00:00</div>
+        <button class="blue" onclick="action({type:'clockToggle'})">
+          เริ่ม / หยุดเวลา
+        </button>
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <button onclick="clockSet(0,false)">รีเซ็ตนับขึ้น</button>
+        <button class="red" onclick="clockSet(1200,true)">
+          20 นาที นับลง
+        </button>
+        <button class="red" onclick="clockSet(600,true)">10 นาที</button>
+        <button class="red" onclick="clockSet(720,true)">12 นาที</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>นาที</label>
+          <input id="manualMin" type="number" min="0" max="1440" value="0">
+        </div>
+        <div>
+          <label>วินาที</label>
+          <input id="manualSec" type="number" min="0" max="59" value="0">
+        </div>
+        <button class="green" onclick="manualClock(false)">
+          ตั้งเวลานับขึ้น
+        </button>
+        <button class="red" onclick="manualClock(true)">
+          ตั้งเวลานับลง
+        </button>
+      </div>
+
+      <div id="shotBox" class="row" style="margin-top:12px">
+        <div id="shotClock" class="clock" style="color:#ff303a">24</div>
+        <button class="blue" onclick="action({type:'shotToggle'})">
+          เริ่ม / หยุด Shot Clock
+        </button>
+        <button onclick="action({type:'shotSet',seconds:24})">24 วิ</button>
+        <button onclick="action({type:'shotSet',seconds:14})">14 วิ</button>
+      </div>
+
+      <div class="grid" id="scoreTeams" style="margin-top:14px"></div>
+
+      <div id="penaltyActions">
+        <button class="red full" style="margin-top:12px"
+          onclick="action({type:'clearPenalty'})">
+          ล้างผลจุดโทษ
+        </button>
+      </div>
+
+      <div id="setHistory" class="small" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>ป้ายเหตุการณ์นักกีฬา</h2>
+
+      <div class="row">
+        <div>
+          <label>ทีม</label>
+          <select id="eventTeam">
+            <option value="0">ทีม A</option>
+            <option value="1">ทีม B</option>
+          </select>
+        </div>
+        <div>
+          <label>เหตุการณ์</label>
+          <select id="eventLabel"></select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>หมายเลข</label>
+          <input id="playerNo" maxlength="8" placeholder="No.">
+        </div>
+        <div>
+          <label>ชื่อนักกีฬา / ข้อความ</label>
+          <input id="playerName" maxlength="70">
+        </div>
+        <div>
+          <label>แสดงกี่วินาที</label>
+          <input id="eventSeconds" type="number" min="2" max="60" value="8">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="green" onclick="showEvent()">แสดงป้ายบนจอ</button>
+        <button class="red" onclick="action({type:'hideEvent'})">ซ่อนป้าย</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>OBS Instant Replay</h2>
+      <div class="row">
+        <button class="purple" onclick="quick(this)">
+          ▶ REPLAY 10 วินาทีล่าสุด
+        </button>
+        <button class="red" onclick="send('/api/live')">LIVE</button>
+        <button onclick="send('/api/vs')">แสดง VS</button>
+      </div>
+    </div>
+
+    <details class="card">
+      <summary>ตัวอย่างกราฟิก</summary>
+      <div class="preview" style="margin-top:12px">
+        <iframe title="ตัวอย่าง Scoreboard"
+          src="/?view=overlay" loading="lazy"></iframe>
+      </div>
+    </details>
+  </section>
+
+  <section id="page-replay" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>Preview — คลิปที่เลือก</h2>
+        <video id="video" controls playsinline muted preload="metadata"></video>
+
+        <div id="selectedName" class="small">
+          เลือก Load จากรายการคลิปด้านล่าง
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button onclick="previewLast()">ดู 10 วินาทีท้าย</button>
+          <button id="monitorBtn" onclick="monitor()">
+            🎧 เสียง Preview: ปิด
+          </button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="red" onclick="saveReplay(this)">
+            บันทึก Replay Buffer
+          </button>
+          <button onclick="send('/api/buffer',{},this)">Start Buffer</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Mark Controls</h2>
+
+        <div class="row">
+          <button class="blue" onclick="mark('in')">Mark In</button>
+          <button class="blue" onclick="mark('out')">Mark Out</button>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>IN — วินาที</label>
+            <input id="in" type="number" min="0" step=".01" value="0">
+          </div>
+          <div>
+            <label>OUT — วินาที</label>
+            <input id="out" type="number" min="0" step=".01" value="0">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button onclick="resetMarks()">Reset ช่วงคลิป</button>
+          <label>
+            <input id="loopPreview" type="checkbox">
+            Loop เฉพาะ Preview
+          </label>
+        </div>
+
+        <p class="small">
+          เสียง Preview ควรฟังผ่านหูฟัง และอย่าให้ Desktop Audio
+          รับกลับเข้ารายการ
+        </p>
+
+        <label>
+          <input id="replayAudio" type="checkbox">
+          ใช้เสียงจากคลิป Replay ในรายการ
+        </label>
+
+        <h2 style="margin-top:25px">นำช่วงที่เลือกออกอากาศ</h2>
+
+        <div class="row">
+          <button class="green" onclick="playSelected(.5,this)">▶ 50%</button>
+          <button class="green" onclick="playSelected(.75,this)">▶ 75%</button>
+          <button class="green" onclick="playSelected(1,this)">▶ 100%</button>
+        </div>
+
+        <button class="red full" style="margin-top:14px"
+          onclick="send('/api/live')">
+          STOP / RETURN TO LIVE
+        </button>
+
+        <p class="small">
+          ระบบเตรียมคลิปก่อนเปลี่ยนภาพออกอากาศ
+          ระหว่างเตรียมยังแสดงภาพสด
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <h2>Replay Files</h2>
+        <button class="red fit" onclick="deleteClips()">
+          ลบคลิปทั้งหมดในระบบนี้
+        </button>
+      </div>
+      <div id="files" class="files"></div>
+    </div>
+  </section>
+
+  <section id="page-camera" hidden>
+    <div class="card">
+      <h2>กล้องมือถือผ่านอินเทอร์เน็ต</h2>
+
+      <p class="small">
+        สร้างกล้องแล้วเปิดลิงก์ส่งภาพหรือสแกน QR บนมือถือ
+        อนุญาตกล้องและไมโครโฟน แล้วเริ่มส่งผ่าน VDO.Ninja
+        มือถือใช้ 4G/5G ได้ สถานะภาพและเสียงให้ตรวจที่ OBS
+      </p>
+
+      <div class="row">
+        <input id="cameraName" placeholder="ชื่อกล้อง เช่น CAM 1">
+        <button class="blue fit" onclick="addCamera(this)">สร้างกล้อง</button>
+        <button class="fit" onclick="send('/api/setup',{},this)">
+          สร้าง / อัปเดต Sources ใน OBS
+        </button>
+      </div>
+    </div>
+
+    <div id="cameras" class="grid"></div>
+  </section>
+
+  <section id="page-setup" hidden>
+    <div class="card">
+      <h2>เชื่อม OBS บนคอมพิวเตอร์เครื่องนี้</h2>
+
+      <p class="small">
+        OBS → Tools → WebSocket Server Settings →
+        Enable WebSocket server ตั้งรหัสผ่านแล้วใส่ด้านล่าง
+      </p>
+
+      <div class="row">
+        <div>
+          <label>Port</label>
+          <input id="obsPort" type="number" value="4455">
+        </div>
+        <div>
+          <label>Password (เว้นว่างเพื่อใช้ค่าที่บันทึกไว้)</label>
+          <input id="obsPassword" type="password" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:14px">
+        <button class="blue"
+          onclick="send('/api/connect',{port:$('obsPort').value,password:$('obsPassword').value},this)">
+          เชื่อมต่อ OBS
+        </button>
+        <button class="green" onclick="send('/api/setup',{},this)">
+          สร้าง / อัปเดต Scenes
+        </button>
+      </div>
+
+      <p class="small">
+        Scenes ที่ใช้: SPORTS_LIVE, SPORTS_REPLAY, SPORTS_VS<br>
+        ตั้ง OBS Replay Buffer 20–30 วินาทีและกำหนดโฟลเดอร์บันทึก
+        ก่อนกด Start Buffer
+      </p>
+
+      <div class="row">
+        <button onclick="send('/api/buffer',{},this)">Start Buffer</button>
+        <button class="red" onclick="send('/api/live')">เปิด LIVE</button>
+        <button onclick="send('/api/vs')">เปิด VS</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ลิงก์สำหรับ OBS</h2>
+      <p>
+        <a class="link" href="/" target="_blank" rel="noopener">
+          หน้า Control / Custom Browser Dock
+        </a>
+      </p>
+      <p>
+        <a class="link" href="/?view=overlay" target="_blank" rel="noopener">
+          Scoreboard + ป้ายเหตุการณ์
+        </a>
+      </p>
+      <p>
+        <a class="link" href="/?view=versus" target="_blank" rel="noopener">
+          หน้า VS
+        </a>
+      </p>
+      <p>
+        <a class="link" href="/?view=replay" target="_blank" rel="noopener">
+          ป้าย Instant Replay
+        </a>
+      </p>
+      <p class="small">
+        การควบคุมและไฟล์วิดีโอทำงานในคอมนี้
+        ส่วนกล้องมือถือใช้ลิงก์ VDO.Ninja ที่หน้ากล้อง
+      </p>
+    </div>
+  </section>
+</div>
+
+<div id="stage"></div>
+<div id="toast" hidden></div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+const E = s => String(s == null ? '' : s).replace(
+  /[&<>"']/g,
+  c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c])
+);
+
+const view = new URLSearchParams(location.search).get('view');
+
+let packet = null;
+let offset = 0;
+let lastMode = '';
+let clip = null;
+let cameraKey = '';
+let lastFileKey = '';
+let toastTimer;
+
+function tab(name) {
+  for (const n of ['score', 'replay', 'camera', 'setup']) {
+    $('page-' + n).hidden = n !== name;
+  }
+
+  document.querySelectorAll('[data-tab]').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+
+  if (name === 'camera') loadCameras();
+}
+
+function toast(message) {
+  $('toast').textContent = message;
+  $('toast').hidden = false;
+  clearTimeout(toastTimer);
+
+  toastTimer = setTimeout(() => {
+    $('toast').hidden = true;
+  }, 6500);
+}
+
+async function send(route, body = {}, button) {
+  if (button) button.disabled = true;
+
+  try {
+    const r = await fetch(route, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    const data = await r.json();
+
+    if (!r.ok || data.error) {
+      throw Error(data.error || 'คำสั่งไม่สำเร็จ');
+    }
+
+    return data;
+  } catch (e) {
+    toast(e.message);
+    return null;
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+const action = b => send('/api/action', b);
+
+function setInput(id, value) {
+  const el = $(id);
+  if (!el || document.activeElement === el) return;
+
+  if (el.type === 'checkbox') el.checked = Boolean(value);
+  else el.value = value == null ? '' : value;
+}
+
+function clockMs(c) {
+  return Math.max(
+    0,
+    c.ms + (
+      c.running
+        ? (Date.now() + offset - c.at) * (c.down ? -1 : 1)
+        : 0
+    )
+  );
+}
+
+function clockText(c) {
+  const n = c.down
+    ? Math.ceil(clockMs(c) / 1000)
+    : Math.floor(clockMs(c) / 1000);
+
+  return String(Math.floor(n / 60)).padStart(2, '0') +
+    ':' + String(n % 60).padStart(2, '0');
+}
+
+function frame() {
+  if (packet) {
+    const s = packet.state.sports[packet.state.mode];
+    const c = $('mainClock'), o = $('overlayClock');
+    const sh = $('shotClock'), os = $('overlayShot');
+
+    if (c) c.textContent = clockText(s.clock);
+    if (o) o.textContent = clockText(s.clock);
+    if (sh) sh.textContent = String(Math.ceil(clockMs(s.shot) / 1000));
+    if (os) os.textContent = String(Math.ceil(clockMs(s.shot) / 1000));
+  }
+}
+
+function manualClock(down) {
+  clockSet(
+    Number($('manualMin').value) * 60 +
+    Number($('manualSec').value),
+    down
+  );
+}
+
+function clockSet(seconds, down) {
+  action({ type: 'clockSet', seconds, down });
+}
+
+function resetSport() {
+  if (confirm('รีเซ็ตคะแนนและเวลาของกีฬานี้?')) {
+    action({ type: 'reset' });
+  }
+}
+
+function buildMode(st) {
+  $('shotBox').hidden = st.mode !== 'basketball';
+  $('penaltyActions').hidden = st.mode !== 'football';
+
+  const labels = {
+    football: ['GOAL', 'YELLOW CARD', 'RED CARD', 'SUBSTITUTION'],
+    basketball: ['POINTS', 'FOUL', 'TIMEOUT', 'SUBSTITUTION'],
+    volleyball: ['ACE', 'POINT', 'TIMEOUT', 'SUBSTITUTION']
+  };
+
+  $('eventLabel').innerHTML = labels[st.mode]
+    .map(x => '<option>' + x + '</option>').join('');
+
+  $('periodLabel').textContent =
+    st.mode === 'basketball' ? 'ควอเตอร์' :
+    st.mode === 'volleyball' ? 'เซต' : 'ครึ่งการแข่งขัน';
+
+  $('scoreTeams').innerHTML = st.teams.map((t, i) => {
+    const buttons = (st.mode === 'basketball' ? [1, 2, 3, -1] : [1, -1])
+      .map(d =>
+        '<button class="' + (d > 0 ? 'green' : 'red') +
+        '" onclick="action({type:\'score\',team:' + i +
+        ',delta:' + d + '})">' + (d > 0 ? '+' : '') +
+        d + '</button>'
+      ).join('');
+
+    return '<div class="team" id="teamBox' + i + '">' +
+      '<h3 id="scoreName' + i + '"></h3>' +
+      '<div class="score" id="score' + i + '">0</div>' +
+      '<div class="row">' + buttons + '</div>' +
+
+      (st.mode !== 'volleyball'
+        ? '<label>ฟาวล์: <b id="foul' + i + '">0</b></label>' +
+          '<div class="row">' +
+          '<button onclick="action({type:\'foul\',team:' + i +
+          ',delta:1})">ฟาวล์ +1</button>' +
+          '<button onclick="action({type:\'foul\',team:' + i +
+          ',delta:-1})">−1</button></div>'
+        : '') +
+
+      (st.mode === 'football'
+        ? '<label>จุดโทษ <span id="pen' + i + '"></span></label>' +
+          '<div class="row">' +
+          '<button class="blue" onclick="action({type:\'penalty\',team:' +
+          i + ',goal:true})">เข้า</button>' +
+          '<button class="red" onclick="action({type:\'penalty\',team:' +
+          i + ',goal:false})">พลาด</button>' +
+          '<button onclick="action({type:\'penalty\',team:' +
+          i + ',undo:true})">ย้อน</button></div>'
+        : '') +
+
+      (st.mode === 'volleyball'
+        ? '<label>ชนะเซต: <b id="sets' + i + '">0</b></label>' +
+          '<div class="row">' +
+          '<button class="blue" onclick="endSet(' + i +
+          ')">ชนะเซตนี้</button>' +
+          '<button onclick="action({type:\'serve\',team:' + i +
+          '})">ทีมเสิร์ฟ</button></div>'
+        : '') +
+
+      '</div>';
+  }).join('');
+}
+
+function endSet(team) {
+  if (confirm('บันทึกผู้ชนะเซตและเริ่มคะแนนเซตใหม่?')) {
+    action({ type: 'set', team });
+  }
+}
+
+function editors() {
+  $('teamEditors').innerHTML = [0, 1].map(i =>
+    '<div class="team"><h3>ทีม ' +
+    (i === 0 ? 'A — เจ้าบ้าน' : 'B — ทีมเยือน') +
+    '</h3><label>ชื่อทีม</label>' +
+    '<input id="teamName' + i + '" maxlength="60">' +
+    '<div class="row"><div><label>สีทีม</label>' +
+    '<input id="teamColor' + i + '" type="color"></div>' +
+    '<button class="blue" onclick="saveTeam(' + i +
+    ')">บันทึกทีม</button></div>' +
+    '<label>โลโก้ทีม</label>' +
+    '<input type="file" accept="image/png,image/jpeg,image/webp"' +
+    ' onchange="logo(this,' + i + ')"></div>'
+  ).join('');
+}
+
+function saveTeam(i) {
+  action({
+    type: 'team',
+    team: i,
+    name: $('teamName' + i).value,
+    color: $('teamColor' + i).value
+  });
+}
+
+async function logo(input, team) {
+  const f = input.files[0];
+  if (!f) return;
+
+  if (f.size > 3 * 1024 * 1024) {
+    toast('รูปต้องไม่เกิน 3 MB');
+    input.value = '';
+    return;
+  }
+
+  const data = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(Error('อ่านรูปไม่ได้'));
+    r.readAsDataURL(f);
+  }).catch(e => {
+    toast(e.message);
+    return null;
+  });
+
+  if (data) await send('/api/logo', { team, data });
+  input.value = '';
+}
+
+function showEvent() {
+  action({
+    type: 'event',
+    team: Number($('eventTeam').value),
+    label: $('eventLabel').value,
+    player: $('playerName').value,
+    number: $('playerNo').value,
+    seconds: $('eventSeconds').value
+  });
+}
+
+function draw(p) {
+  packet = p;
+  offset = p.now - Date.now();
+
+  if (view) {
+    drawOverlay();
+    frame();
+    return;
+  }
+
+  const st = p.state, s = st.sports[st.mode];
+
+  $('connection').textContent =
+    p.status.connected ? 'OBS CONNECTED' : 'OBS OFFLINE';
+
+  $('connection').style.background =
+    p.status.connected ? '#12603d' : '#603329';
+
+  $('status').textContent =
+    (p.status.buffer ? '● Buffer ON' : '○ Buffer OFF') +
+    ' • ' + p.status.message +
+    (p.status.program ? ' • ' + p.status.program : '');
+
+  for (const k of [
+    'title', 'bg', 'text', 'scale', 'x', 'eventScale',
+    'showTime', 'showFouls', 'showPenalties', 'stinger'
+  ]) {
+    setInput(k, st[k]);
+  }
+
+  setInput('period', s.period);
+  if (p.obsPort) setInput('obsPort', p.obsPort);
+
+  for (const m of ['football', 'basketball', 'volleyball']) {
+    $('mode-' + m).classList.toggle('active', m === st.mode);
+  }
+
+  if (lastMode !== st.mode) {
+    buildMode(st);
+    lastMode = st.mode;
+  }
+
+  st.teams.forEach((t, i) => {
+    setInput('teamName' + i, t.name);
+    setInput('teamColor' + i, t.color);
+
+    $('scoreName' + i).textContent = t.name;
+    $('score' + i).textContent = s.score[i];
+    $('teamBox' + i).style.borderColor = t.color;
+
+    if ($('foul' + i)) $('foul' + i).textContent = s.fouls[i];
+
+    if ($('pen' + i)) {
+      $('pen' + i).textContent =
+        s.penalties[i].map(x => x ? '●' : '×').join(' ');
+    }
+
+    if ($('sets' + i)) {
+      $('sets' + i).textContent =
+        s.sets[i] + (s.serve === i ? ' • เสิร์ฟ' : '');
+    }
+
+    $('eventTeam').options[i].textContent = t.name;
+  });
+
+  $('setHistory').textContent = st.mode === 'volleyball'
+    ? 'ผลเซตที่ผ่านมา: ' + (
+        s.setHistory.map((x, i) => (i + 1) + ': ' + x.join('–'))
+          .join(' | ') || '—'
+      )
+    : '';
+
+  drawFiles();
+
+  const key = st.cameras.map(c => c.id).join(',');
+
+  if (key !== cameraKey) {
+    cameraKey = key;
+    loadCameras();
+  }
+
+  frame();
+}
+
+function logoHTML(t) {
+  return t.logo ? '<img src="' + E(t.logo) + '" alt="">' : '';
+}
+
+function drawOverlay() {
+  const st = packet.state, s = st.sports[st.mode];
+  let html = '';
+
+  if (view === 'versus') {
+    html =
+      '<div class="vs" style="--a:' + st.teams[0].color +
+      ';--b:' + st.teams[1].color + '">' +
+      '<h1>' + E(st.title) + '</h1><div class="versusrow">';
+
+    const team = t =>
+      '<div class="vsteam">' +
+      (t.logo ? logoHTML(t) : '<div class="fallback">★</div>') +
+      E(t.name) + '</div>';
+
+    html += team(st.teams[0]) +
+      '<div class="vsword">VS</div>' +
+      team(st.teams[1]) +
+      '</div><div class="vsfoot">SPORTS LIVE</div></div>';
+
+  } else if (view === 'replay') {
+    html = '<div class="replaybadge">INSTANT REPLAY</div>';
+
+  } else {
+    const a = st.teams[0], b = st.teams[1];
+
+    html =
+      '<div class="bug" style="left:' + st.x +
+      '%;transform:translateX(-50%) scale(' + st.scale +
+      ');color:' + st.text + '">' +
+
+      '<div class="league">' + E(st.title) + '</div>' +
+      '<div class="bugbar" style="background:' + st.bg + '">' +
+
+      '<div class="teamlabel" style="--team:' + a.color + '">' +
+      '<span>' + E(a.name) + '</span>' + logoHTML(a) + '</div>' +
+
+      '<div class="bugscore">' + s.score[0] + '</div>' +
+
+      (st.showTime
+        ? '<div class="bugtime" id="overlayClock"></div>'
+        : '') +
+
+      '<div class="bugscore">' + s.score[1] + '</div>' +
+
+      '<div class="teamlabel" style="--team:' + b.color + '">' +
+      logoHTML(b) + '<span>' + E(b.name) + '</span></div></div>' +
+
+      '<div class="bugextra"><span>' +
+      (st.mode === 'basketball' ? 'Q ' :
+       st.mode === 'volleyball' ? 'SET ' : 'ครึ่ง ') +
+      E(s.period) + '</span>' +
+
+      (st.mode === 'basketball'
+        ? '<span>SHOT <b id="overlayShot"></b></span>'
+        : '') +
+
+      (st.showFouls
+        ? '<span>FOULS ' + s.fouls.join(' – ') + '</span>'
+        : '') +
+
+      (st.mode === 'volleyball'
+        ? '<span>SETS ' + s.sets.join(' – ') +
+          ' • SERVE ' + E(st.teams[s.serve].name) + '</span>'
+        : '') +
+
+      '</div>' +
+
+      (st.showPenalties && st.mode === 'football'
+        ? '<div class="bugextra"><span>' +
+          s.penalties[0].map(x => x ? '●' : '×').join(' ') +
+          '</span><span>PENALTIES</span><span>' +
+          s.penalties[1].map(x => x ? '●' : '×').join(' ') +
+          '</span></div>'
+        : '') +
+
+      '</div>';
+
+    if (st.event && st.event.until > Date.now() + offset) {
+      const e = st.event;
+
+      html +=
+        '<div class="lower" style="transform:translateX(-50%) scale(' +
+        st.eventScale + ')">' +
+        '<div class="eventlabel">' + E(e.label) + '</div>' +
+        '<div class="eventbody"><small>' +
+        E(st.teams[e.team].name) + '</small><b>' +
+        E(e.number) + '</b> ' + E(e.player) + '</div></div>';
+    }
+  }
+
+  const age = Date.now() + offset - packet.animation;
+
+  if (st.stinger && age >= 0 && age < 1100) {
+    html +=
+      '<div class="wipe" style="animation-delay:-' + age + 'ms">' +
+      (st.logo
+        ? '<img src="' + E(st.logo) + '" alt="">'
+        : '<strong>SPORTS LIVE</strong>') +
+      '</div>';
+  }
+
+  $('stage').innerHTML = html;
+  resize();
+}
+
+function resize() {
+  if (view) {
+    $('stage').style.transform =
+      'scale(' + Math.min(innerWidth / 1920, innerHeight / 1080) + ')';
+  }
+}
+
+function drawFiles() {
+  const key = JSON.stringify(packet.clips);
+  if (key === lastFileKey) return;
+  lastFileKey = key;
+
+  $('files').innerHTML = packet.clips.length
+    ? packet.clips.map(c =>
+        '<div class="file"><span>' + E(c.name) +
+        ' <small>' + c.duration.toFixed(2) + 's</small></span>' +
+        '<button class="blue" onclick="loadClip(\'' + c.id +
+        '\')">Load</button>' +
+        '<button class="red" onclick="deleteClips(\'' + c.id +
+        '\')">Del</button></div>'
+      ).join('')
+    : '<p class="small">ยังไม่มีคลิป กดบันทึก Replay Buffer</p>';
+
+  if (clip && !packet.clips.some(c => c.id === clip.id)) {
+    clip = null;
+    $('video').pause();
+    $('video').removeAttribute('src');
+    $('video').load();
+    $('selectedName').textContent = 'คลิปถูกลบแล้ว';
+  }
+}
+
+function loadClip(id) {
+  clip = packet.clips.find(c => c.id === id);
+  if (!clip) return;
+
+  const v = $('video');
+  v.pause();
+  v.src = '/media/' + clip.id + '.mp4';
+
+  $('selectedName').textContent = clip.name;
+  resetMarks();
+  tab('replay');
+}
+
+function limit() {
+  return clip
+    ? Math.min(
+        clip.duration,
+        Number.isFinite($('video').duration)
+          ? $('video').duration
+          : clip.duration
+      )
+    : 0;
+}
+
+function resetMarks() {
+  if (!clip) return;
+  $('in').value = 0;
+  $('out').value = limit().toFixed(2);
+}
+
+function mark(which) {
+  if (!clip) return toast('เลือกคลิปก่อน');
+  $(which).value = $('video').currentTime.toFixed(2);
+}
+
+function previewLast() {
+  if (!clip) return toast('เลือกคลิปก่อน');
+
+  $('in').value = Math.max(0, limit() - 10).toFixed(2);
+  $('out').value = limit().toFixed(2);
+
+  $('video').currentTime = Number($('in').value);
+  $('video').play().catch(e => toast(e.message));
+}
+
+function monitor() {
+  const v = $('video');
+  v.muted = !v.muted;
+
+  $('monitorBtn').textContent =
+    '🎧 เสียง Preview: ' + (v.muted ? 'ปิด' : 'เปิด');
+}
+
+async function saveReplay(button) {
+  const r = await send('/api/save', {}, button);
+
+  if (r && r.clip) {
+    await refresh();
+    loadClip(r.clip.id);
+  }
+}
+
+async function quick(button) {
+  await send('/api/quick', {}, button);
+}
+
+async function playSelected(speed, button) {
+  if (!clip) return toast('เลือก Load คลิปก่อน');
+
+  const start = Number($('in').value);
+  const end = Number($('out').value);
+
+  if (
+    !Number.isFinite(start) ||
+    !Number.isFinite(end) ||
+    start < 0 ||
+    end <= start ||
+    end > limit() + .05
+  ) {
+    return toast('กำหนด 0 ≤ IN < OUT ≤ ความยาวคลิป');
+  }
+
+  $('video').pause();
+
+  await send('/api/play', {
+    id: clip.id,
+    start,
+    end,
+    speed,
+    audio: $('replayAudio').checked
+  }, button);
+}
+
+async function deleteClips(id) {
+  if (!confirm(
+    id ? 'ลบคลิปนี้?' : 'ลบคลิปทั้งหมดที่ระบบนี้สร้างไว้?'
+  )) return;
+
+  if (clip && (!id || id === clip.id)) {
+    $('video').pause();
+    $('video').removeAttribute('src');
+    $('video').load();
+  }
+
+  await send('/api/delete', id ? { id } : { all: true });
+}
+
+async function addCamera(button) {
+  const r = await send(
+    '/api/camera',
+    { name: $('cameraName').value },
+    button
+  );
+
+  if (r) {
+    $('cameraName').value = '';
+    await loadCameras();
+  }
+}
+
+async function loadCameras() {
+  if (view) return;
+
+  try {
+    const r = await fetch('/api/cameras');
+    if (!r.ok) return;
+
+    const data = await r.json();
+
+    $('cameras').innerHTML = data.cameras.map((c, i) =>
+      '<div class="camera"><h3>' + E(c.name) + '</h3>' +
+      '<img src="' + c.qr + '" alt="QR เปิดกล้อง">' +
+      '<label>ลิงก์ส่งภาพ — เปิดบนมือถือ</label>' +
+      '<input id="push' + i + '" readonly value="' + E(c.push) + '">' +
+      '<div class="row" style="margin-top:10px">' +
+      '<button onclick="copyLink(\'push' + i +
+      '\')">คัดลอกลิงก์</button>' +
+      '<button class="red" onclick="send(\'/api/take\',{id:\'' +
+      c.id + '\'},this)">LIVE กล้องนี้</button></div>' +
+      '<p class="small"><a class="link" href="' + E(c.view) +
+      '" target="_blank" rel="noopener noreferrer">' +
+      'เปิดตรวจสัญญาณแยก</a></p></div>'
+    ).join('') || '<p class="small">ยังไม่มีกล้อง</p>';
+
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+async function copyLink(id) {
+  try {
+    await navigator.clipboard.writeText($(id).value);
+    toast('คัดลอกแล้ว');
+  } catch {
+    $(id).select();
+    document.execCommand('copy');
+    toast('คัดลอกแล้ว');
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/state');
+    if (r.ok) draw(await r.json());
+  } catch (e) {
+    if (!view) toast(e.message);
+  }
+}
+
+if (!view) {
+  editors();
+
+  document.querySelectorAll('[data-style]').forEach(el => {
+    el.addEventListener('change', () => action({
+      type: 'style',
+      [el.dataset.style]: el.type === 'checkbox' ? el.checked : el.value
+    }));
+  });
+
+  const v = $('video');
+
+  v.addEventListener('loadedmetadata', resetMarks);
+
+  v.addEventListener('timeupdate', () => {
+    if (clip && !v.paused && $('loopPreview').checked) {
+      const a = Number($('in').value), b = Number($('out').value);
+
+      if (b > a && (v.currentTime >= b || v.currentTime < a)) {
+        v.currentTime = a;
+      }
+    }
+  });
+
+  v.addEventListener('ended', () => {
+    if (clip && $('loopPreview').checked) {
+      v.currentTime = Number($('in').value) || 0;
+      v.play().catch(() => {});
+    }
+  });
+}
+
+const stream = new EventSource('/events');
+
+stream.onmessage = e => draw(JSON.parse(e.data));
+
+stream.addEventListener('tick', e => {
+  offset = Number(e.data) - Date.now();
+  frame();
+});
+
+stream.onerror = () => {
+  if (!view) {
+    $('connection').textContent = 'เซิร์ฟเวอร์ขาดการเชื่อมต่อ';
+    $('status').textContent =
+      'เปิด server.cjs ค้างไว้ แล้วรอเชื่อมต่อใหม่';
+  }
+};
+
+setInterval(frame, 100);
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
